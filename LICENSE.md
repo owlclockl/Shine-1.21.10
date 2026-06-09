@@ -1,6 +1,6 @@
 Copyright © 2026 tapeQ. All rights reserved.
 
-Shine / Shine: Selective Bloom is proprietary software.
+Shine is proprietary software.
 
 You may download, install, and use official releases of this mod for personal gameplay.
 
