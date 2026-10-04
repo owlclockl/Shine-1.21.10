@@ -13,7 +13,6 @@ import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.shaders.UniformType;
-import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.textures.TextureFormat;
@@ -27,20 +26,22 @@ import net.fabricmc.fabric.api.client.rendering.v1.world.WorldTerrainRenderConte
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayerGroup;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
 
 public final class BloomSourceRenderer {
-	public static final Identifier SOURCE_TARGET_ID = Identifier.fromNamespaceAndPath(BloomMod.MOD_ID, "source");
-	private static final Identifier TERRAIN_VERTEX_SHADER_ID = Identifier.withDefaultNamespace("core/terrain");
-	private static final Identifier BLOOM_TERRAIN_SOURCE_FRAGMENT_SHADER_ID = Identifier.fromNamespaceAndPath(BloomMod.MOD_ID, "core/terrain_bloom_source");
-	private static final Identifier BLOOM_TERRAIN_SOLID_PIPELINE_ID = Identifier.fromNamespaceAndPath(BloomMod.MOD_ID, "pipeline/bloom_terrain_solid");
-	private static final Identifier BLOOM_TERRAIN_CUTOUT_PIPELINE_ID = Identifier.fromNamespaceAndPath(BloomMod.MOD_ID, "pipeline/bloom_terrain_cutout");
-	private static final List<String> CHUNK_SECTION_UNIFORMS = List.of("ChunkSection");
+	public static final ResourceLocation SOURCE_TARGET_ID = ResourceLocation.fromNamespaceAndPath(BloomMod.MOD_ID, "source");
+	private static final ResourceLocation TERRAIN_VERTEX_SHADER_ID = ResourceLocation.withDefaultNamespace("core/terrain");
+	private static final ResourceLocation BLOOM_TERRAIN_SOURCE_FRAGMENT_SHADER_ID = ResourceLocation.fromNamespaceAndPath(BloomMod.MOD_ID, "core/terrain_bloom_source");
+	private static final ResourceLocation BLOOM_TERRAIN_SOLID_PIPELINE_ID = ResourceLocation.fromNamespaceAndPath(BloomMod.MOD_ID, "pipeline/bloom_terrain_solid");
+	private static final ResourceLocation BLOOM_TERRAIN_CUTOUT_PIPELINE_ID = ResourceLocation.fromNamespaceAndPath(BloomMod.MOD_ID, "pipeline/bloom_terrain_cutout");
+	private static final List<String> CHUNK_SECTION_UNIFORMS = List.of("DynamicTransforms");
 	private static final float INTERNAL_POST_SCALE = 0.5f;
 	private static final int BLOOM_ATTACHMENT = GL30.GL_COLOR_ATTACHMENT1;
 	private static final int[] MRT_DRAW_BUFFERS = new int[] { GL30.GL_COLOR_ATTACHMENT0, BLOOM_ATTACHMENT };
@@ -100,11 +101,9 @@ public final class BloomSourceRenderer {
 
 	public static void replayVanillaOpaqueGroup(
 		ChunkSectionLayerGroup group,
-		com.mojang.blaze3d.textures.GpuSampler sampler,
-		GpuTextureView textureView,
 		EnumMap<ChunkSectionLayer, List<RenderPass.Draw<GpuBufferSlice[]>>> drawsPerLayer,
 		int maxIndicesRequired,
-		GpuBufferSlice[] chunkSectionInfos
+		GpuBufferSlice[] dynamicTransforms
 	) {
 		if (!preparedThisFrame || group != ChunkSectionLayerGroup.OPAQUE || bloomAttachmentView == null || drawsPerLayer == null) {
 			return;
@@ -121,6 +120,16 @@ public final class BloomSourceRenderer {
 			return;
 		}
 
+		// 1.21.10's ChunkSectionsToRender does not carry the block atlas view, so look it up directly.
+		AbstractTexture blockAtlas = minecraft.getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+		if (blockAtlas == null) {
+			return;
+		}
+		GpuTextureView textureView = blockAtlas.getTextureView();
+		if (textureView == null) {
+			return;
+		}
+
 		CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
 		try (
 			RenderPass renderPass = encoder.createRenderPass(
@@ -134,11 +143,7 @@ public final class BloomSourceRenderer {
 			RenderSystem.bindDefaultUniforms(renderPass);
 			LightTexture lightTexture = minecraft.gameRenderer.lightTexture();
 			if (lightTexture != null) {
-				renderPass.bindTexture(
-					"Sampler2",
-					lightTexture.getTextureView(),
-					RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-				);
+				renderPass.bindSampler("Sampler2", lightTexture.getTextureView());
 			}
 
 			RenderSystem.AutoStorageIndexBuffer sequentialBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
@@ -152,7 +157,8 @@ public final class BloomSourceRenderer {
 
 				RenderPipeline pipeline = switch (layer) {
 					case SOLID -> BLOOM_TERRAIN_SOLID_PIPELINE;
-					case CUTOUT -> BLOOM_TERRAIN_CUTOUT_PIPELINE;
+					// 1.21.10 still splits cutout terrain into mipped and non-mipped layers.
+					case CUTOUT, CUTOUT_MIPPED -> BLOOM_TERRAIN_CUTOUT_PIPELINE;
 					default -> null;
 				};
 				if (pipeline == null) {
@@ -160,8 +166,8 @@ public final class BloomSourceRenderer {
 				}
 
 				renderPass.setPipeline(pipeline);
-				renderPass.bindTexture("Sampler0", textureView, sampler);
-				renderPass.drawMultipleIndexed(draws, indexBuffer, indexType, CHUNK_SECTION_UNIFORMS, chunkSectionInfos);
+				renderPass.bindSampler("Sampler0", textureView);
+				renderPass.drawMultipleIndexed(draws, indexBuffer, indexType, CHUNK_SECTION_UNIFORMS, dynamicTransforms);
 			}
 		}
 	}
@@ -282,7 +288,7 @@ public final class BloomSourceRenderer {
 		return colorTexture.getFbo(device.directStateAccess(), target.getDepthTexture());
 	}
 
-	private static RenderPipeline buildTerrainSourcePipeline(Identifier location, boolean cutout) {
+	private static RenderPipeline buildTerrainSourcePipeline(ResourceLocation location, boolean cutout) {
 		RenderPipeline.Snippet fogSnippet = RenderPipeline.builder().withUniform("Fog", UniformType.UNIFORM_BUFFER).buildSnippet();
 		RenderPipeline.Snippet genericBlocksSnippet = RenderPipeline.builder(fogSnippet)
 			.withSampler("Sampler0")
@@ -291,7 +297,7 @@ public final class BloomSourceRenderer {
 			.buildSnippet();
 		RenderPipeline.Snippet bloomTerrainSnippet = RenderPipeline.builder(genericBlocksSnippet)
 			.withUniform("Projection", UniformType.UNIFORM_BUFFER)
-			.withUniform("ChunkSection", UniformType.UNIFORM_BUFFER)
+			.withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
 			.withVertexShader(TERRAIN_VERTEX_SHADER_ID)
 			.withFragmentShader(BLOOM_TERRAIN_SOURCE_FRAGMENT_SHADER_ID)
 			.buildSnippet();

@@ -16,7 +16,7 @@ public abstract class ModelBlockRendererMixin {
 		method = "putQuadData",
 		at = @At(
 			value = "INVOKE",
-			target = "Lcom/mojang/blaze3d/vertex/VertexConsumer;putBulkData(Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/minecraft/client/renderer/block/model/BakedQuad;[FFFFF[II)V"
+			target = "Lcom/mojang/blaze3d/vertex/VertexConsumer;putBulkData(Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/minecraft/client/renderer/block/model/BakedQuad;[FFFFF[IIZ)V"
 		)
 	)
 	private void bloom$forceSelectedBlockLight(
@@ -29,13 +29,14 @@ public abstract class ModelBlockRendererMixin {
 		float blue,
 		float alpha,
 		int[] lightmaps,
-		int packedOverlay
+		int packedOverlay,
+		boolean readAlpha
 	) {
 		double sourceStrength = BloomSelectionState.getBlockStrength();
 		int[] encoded = lightmaps.clone();
 		for (int i = 0; i < encoded.length; i++) {
 			encoded[i] = BloomSourceEncoding.encodePackedLight(encoded[i], sourceStrength);
 		}
-		vertexConsumer.putBulkData(pose, bakedQuad, brightness, red, green, blue, alpha, encoded, packedOverlay);
+		vertexConsumer.putBulkData(pose, bakedQuad, brightness, red, green, blue, alpha, encoded, packedOverlay, readAlpha);
 	}
 }

@@ -1,7 +1,7 @@
 package com.bloom.mixin.client.sodium;
 
 import net.caffeinemc.mods.sodium.client.gl.shader.ShaderLoader;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(value = ShaderLoader.class, remap = false)
 public abstract class SodiumShaderLoaderMixin {
 	@Inject(method = "getShaderSource", at = @At("RETURN"), cancellable = true, require = 0)
-	private static void shine$injectBloomOutput(Identifier name, CallbackInfoReturnable<String> cir) {
+	private static void shine$injectBloomOutput(ResourceLocation name, CallbackInfoReturnable<String> cir) {
 		String shader = cir.getReturnValue();
 		if (shader == null || !"sodium".equals(name.getNamespace()) || !"blocks/block_layer_opaque.fsh".equals(name.getPath())) {
 			return;
@@ -37,15 +37,16 @@ public abstract class SodiumShaderLoaderMixin {
 			void main() {
 			"""
 		);
+		// Sodium 0.7.x (Minecraft 1.21.10) has no chunk fade-in, so _linearFog takes five arguments.
 		injected = injected.replace(
-			"    fragColor = _linearFog(color, v_FragDistance, u_FogColor, u_EnvironmentFog, u_RenderFog, fadeFactor);\n}",
+			"    fragColor = _linearFog(color, v_FragDistance, u_FogColor, u_EnvironmentFog, u_RenderFog);\n}",
 			"""
-			    fragColor = _linearFog(color, v_FragDistance, u_FogColor, u_EnvironmentFog, u_RenderFog, fadeFactor);
+			    fragColor = _linearFog(color, v_FragDistance, u_FogColor, u_EnvironmentFog, u_RenderFog);
 			    float bloomStrength = shine_decode_source_strength(v_Material);
 			    if (bloomStrength <= 1.0e-5) {
 			        bloomColor = vec4(0.0);
 			    } else {
-			        float fogValue = max(1.0 - fadeFactor, total_fog_value(v_FragDistance.y, v_FragDistance.x, u_EnvironmentFog.x, u_EnvironmentFog.y, u_RenderFog.x, u_RenderFog.y));
+			        float fogValue = total_fog_value(v_FragDistance.y, v_FragDistance.x, u_EnvironmentFog.x, u_EnvironmentFog.y, u_RenderFog.x, u_RenderFog.y);
 			        float fogAttenuation = 1.0 - fogValue;
 			        bloomColor = vec4(fragColor.rgb * fragColor.a * fogAttenuation, clamp(bloomStrength / 5.0, 0.0, 1.0));
 			    }

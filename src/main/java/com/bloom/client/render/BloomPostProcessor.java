@@ -30,15 +30,15 @@ import net.minecraft.client.renderer.PostChainConfig;
 import net.minecraft.client.renderer.PostPass;
 import net.minecraft.client.renderer.ShaderManager;
 import net.minecraft.client.renderer.UniformValue;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public final class BloomPostProcessor {
-	private static final Identifier EXTRACT_SHADER_ID = Identifier.fromNamespaceAndPath(BloomMod.MOD_ID, "post/bloom_extract");
-	private static final Identifier DOWNSAMPLE_SHADER_ID = Identifier.fromNamespaceAndPath(BloomMod.MOD_ID, "post/bloom_downsample");
-	private static final Identifier COMPOSITE_SHADER_ID = Identifier.fromNamespaceAndPath(BloomMod.MOD_ID, "post/bloom_composite");
-	private static final Identifier SCREEN_QUAD_SHADER_ID = Identifier.withDefaultNamespace("core/screenquad");
-	private static final Identifier RUNTIME_CHAIN_ID = Identifier.fromNamespaceAndPath(BloomMod.MOD_ID, "runtime_bloom");
-	private static final Set<Identifier> EXTERNAL_TARGETS = Set.of(LevelTargetBundle.MAIN_TARGET_ID, BloomSourceRenderer.SOURCE_TARGET_ID);
+	private static final ResourceLocation EXTRACT_SHADER_ID = ResourceLocation.fromNamespaceAndPath(BloomMod.MOD_ID, "post/bloom_extract");
+	private static final ResourceLocation DOWNSAMPLE_SHADER_ID = ResourceLocation.fromNamespaceAndPath(BloomMod.MOD_ID, "post/bloom_downsample");
+	private static final ResourceLocation COMPOSITE_SHADER_ID = ResourceLocation.fromNamespaceAndPath(BloomMod.MOD_ID, "post/bloom_composite");
+	private static final ResourceLocation SCREEN_QUAD_SHADER_ID = ResourceLocation.withDefaultNamespace("core/screenquad");
+	private static final ResourceLocation RUNTIME_CHAIN_ID = ResourceLocation.fromNamespaceAndPath(BloomMod.MOD_ID, "runtime_bloom");
+	private static final Set<ResourceLocation> EXTERNAL_TARGETS = Set.of(LevelTargetBundle.MAIN_TARGET_ID, BloomSourceRenderer.SOURCE_TARGET_ID);
 	private static final CachedOrthoProjectionMatrixBuffer PROJECTION_BUFFER = new CachedOrthoProjectionMatrixBuffer("shine_runtime_post", 0.1F, 1000.0F, false);
 	private static final int MAX_ACTIVE_LEVELS = BloomConfig.MAX_BLUR_PASSES + 3;
 	private static final int DYNAMIC_UNIFORM_USAGE = GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_MAP_WRITE;
@@ -51,12 +51,12 @@ public final class BloomPostProcessor {
 	private static final float RADIUS_RESPONSE_EXPONENT = 1.5F;
 	private static final double WEIGHT_DISTRIBUTION_DENOMINATOR = 1.15D;
 	private static final float[] BASE_LEVEL_FACTORS = new float[] { 1.0F, 0.8F, 0.6F, 0.4F, 0.2F, 0.1F };
-	private static final Identifier HALF_A_TARGET_ID = runtimeTarget("half_a");
-	private static final Identifier QUARTER_A_TARGET_ID = runtimeTarget("quarter_a");
-	private static final Identifier EIGHTH_A_TARGET_ID = runtimeTarget("eighth_a");
-	private static final Identifier SIXTEENTH_A_TARGET_ID = runtimeTarget("sixteenth_a");
-	private static final Identifier THIRTYSECOND_A_TARGET_ID = runtimeTarget("thirtysecond_a");
-	private static final Identifier SIXTYFOURTH_A_TARGET_ID = runtimeTarget("sixtyfourth_a");
+	private static final ResourceLocation HALF_A_TARGET_ID = runtimeTarget("half_a");
+	private static final ResourceLocation QUARTER_A_TARGET_ID = runtimeTarget("quarter_a");
+	private static final ResourceLocation EIGHTH_A_TARGET_ID = runtimeTarget("eighth_a");
+	private static final ResourceLocation SIXTEENTH_A_TARGET_ID = runtimeTarget("sixteenth_a");
+	private static final ResourceLocation THIRTYSECOND_A_TARGET_ID = runtimeTarget("thirtysecond_a");
+	private static final ResourceLocation SIXTYFOURTH_A_TARGET_ID = runtimeTarget("sixtyfourth_a");
 
 	private static boolean warnedChainLoadFailure;
 	private static boolean warnedUniformWriteFailure;
@@ -205,7 +205,7 @@ public final class BloomPostProcessor {
 		int sixtyfourthWidth = getScaledDimension(mainWidth, 0.015625F);
 		int sixtyfourthHeight = getScaledDimension(mainHeight, 0.015625F);
 
-		Map<Identifier, PostChainConfig.InternalTarget> targets = new LinkedHashMap<>();
+		Map<ResourceLocation, PostChainConfig.InternalTarget> targets = new LinkedHashMap<>();
 		targets.put(HALF_A_TARGET_ID, internalTarget(halfWidth, halfHeight));
 		targets.put(QUARTER_A_TARGET_ID, internalTarget(quarterWidth, quarterHeight));
 		if (activeLevels >= 3) {
@@ -513,15 +513,15 @@ public final class BloomPostProcessor {
 		return Math.max(min, Math.min(max, value));
 	}
 
-	private static Identifier runtimeTarget(String path) {
-		return Identifier.fromNamespaceAndPath(BloomMod.MOD_ID, path);
+	private static ResourceLocation runtimeTarget(String path) {
+		return ResourceLocation.fromNamespaceAndPath(BloomMod.MOD_ID, path);
 	}
 
 	private static PostChainConfig.InternalTarget internalTarget(int width, int height) {
 		return new PostChainConfig.InternalTarget(Optional.of(width), Optional.of(height), true, 0);
 	}
 
-	private static Identifier compositeLevelTarget(int levelIndex, int activeLevels) {
+	private static ResourceLocation compositeLevelTarget(int levelIndex, int activeLevels) {
 		int resolvedIndex = Math.min(levelIndex, activeLevels - 1);
 		return switch (resolvedIndex) {
 			case 0 -> HALF_A_TARGET_ID;
@@ -535,15 +535,15 @@ public final class BloomPostProcessor {
 	}
 
 	private static PostChainConfig.Pass postPass(
-		Identifier fragmentShaderId,
+		ResourceLocation fragmentShaderId,
 		List<PostChainConfig.Input> inputs,
-		Identifier outputTarget,
+		ResourceLocation outputTarget,
 		Map<String, List<UniformValue>> uniforms
 	) {
 		return new PostChainConfig.Pass(SCREEN_QUAD_SHADER_ID, fragmentShaderId, inputs, outputTarget, uniforms);
 	}
 
-	private static PostChainConfig.TargetInput targetInput(String samplerName, Identifier targetId, boolean depthBuffer, boolean bilinear) {
+	private static PostChainConfig.TargetInput targetInput(String samplerName, ResourceLocation targetId, boolean depthBuffer, boolean bilinear) {
 		return new PostChainConfig.TargetInput(samplerName, targetId, depthBuffer, bilinear);
 	}
 
@@ -603,7 +603,7 @@ public final class BloomPostProcessor {
 		}
 
 		@Override
-		public void replace(Identifier identifier, ResourceHandle<RenderTarget> resourceHandle) {
+		public void replace(ResourceLocation identifier, ResourceHandle<RenderTarget> resourceHandle) {
 			if (identifier.equals(LevelTargetBundle.MAIN_TARGET_ID)) {
 				this.main = resourceHandle;
 			} else if (identifier.equals(BloomSourceRenderer.SOURCE_TARGET_ID)) {
@@ -614,7 +614,7 @@ public final class BloomPostProcessor {
 		}
 
 		@Override
-		public ResourceHandle<RenderTarget> get(Identifier identifier) {
+		public ResourceHandle<RenderTarget> get(ResourceLocation identifier) {
 			if (identifier.equals(LevelTargetBundle.MAIN_TARGET_ID)) {
 				return this.main;
 			}

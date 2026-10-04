@@ -11,7 +11,7 @@ import java.util.Map;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public final class BloomConfig {
 	public static final int MAX_BLUR_PASSES = 3;
@@ -114,7 +114,7 @@ public final class BloomConfig {
 				}
 
 				try {
-					Identifier.parse(entry.getKey());
+					ResourceLocation.parse(entry.getKey());
 				} catch (Exception ignored) {
 					continue;
 				}

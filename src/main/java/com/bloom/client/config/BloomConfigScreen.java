@@ -21,7 +21,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 
 public final class BloomConfigScreen {
@@ -300,7 +300,7 @@ public final class BloomConfigScreen {
 	private static List<BlockEntry> bloom$getBlockEntries() {
 		List<BlockEntry> entries = new ArrayList<>();
 		for (Block block : BuiltInRegistries.BLOCK) {
-			Identifier id = BuiltInRegistries.BLOCK.getKey(block);
+			ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
 			if (id == null) {
 				continue;
 			}

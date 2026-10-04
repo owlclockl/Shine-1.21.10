@@ -1,7 +1,6 @@
 package com.bloom.mixin.client.sodium;
 
 import com.bloom.client.render.BloomSourceRenderer;
-import com.mojang.blaze3d.textures.GpuSampler;
 import net.caffeinemc.mods.sodium.client.render.chunk.ShaderChunkRenderer;
 import net.caffeinemc.mods.sodium.client.render.chunk.terrain.TerrainRenderPass;
 import net.caffeinemc.mods.sodium.client.util.FogParameters;
@@ -14,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(value = ShaderChunkRenderer.class, remap = false)
 public abstract class SodiumShaderChunkRendererMixin {
 	@Inject(method = "begin", at = @At("HEAD"), require = 0)
-	private void shine$enableBloomAttachment(TerrainRenderPass pass, FogParameters fogParameters, GpuSampler mipSampler, CallbackInfo ci) {
+	private void shine$enableBloomAttachment(TerrainRenderPass pass, FogParameters fogParameters, CallbackInfo ci) {
 		if (!pass.isTranslucent()) {
 			BloomSourceRenderer.enableBloomDrawBuffers(pass.getTarget());
 		}
