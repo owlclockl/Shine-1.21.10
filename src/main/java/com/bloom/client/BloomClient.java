@@ -9,7 +9,7 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.KeyMapping;
 import com.mojang.blaze3d.platform.InputConstants;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
 
 public class BloomClient implements ClientModInitializer {
@@ -18,7 +18,7 @@ public class BloomClient implements ClientModInitializer {
 			"key.shine.toggle",
 			InputConstants.Type.KEYSYM,
 			GLFW.GLFW_KEY_B,
-			KeyMapping.Category.register(Identifier.fromNamespaceAndPath(BloomMod.MOD_ID, "main"))
+			KeyMapping.Category.register(ResourceLocation.fromNamespaceAndPath(BloomMod.MOD_ID, "main"))
 		)
 	);
 

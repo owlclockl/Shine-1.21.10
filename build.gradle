@@ -54,7 +54,7 @@ dependencies {
 	modLocalRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
 
 	// Sodium compile stubs for optional compatibility mixins.
-	modCompileOnly "maven.modrinth:sodium:mc1.21.11-0.8.6-fabric"
+	modCompileOnly "maven.modrinth:sodium:mc1.21.10-0.7.3-fabric"
 }
 
 processResources {

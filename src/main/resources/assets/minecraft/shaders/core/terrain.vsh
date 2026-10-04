@@ -1,8 +1,7 @@
 #version 330
 
 #moj_import <minecraft:fog.glsl>
-#moj_import <minecraft:globals.glsl>
-#moj_import <minecraft:chunksection.glsl>
+#moj_import <minecraft:dynamictransforms.glsl>
 #moj_import <minecraft:projection.glsl>
 
 in vec3 Position;
@@ -38,7 +37,7 @@ float shine_decode_bloom_strength(ivec2 uv2) {
 }
 
 void main() {
-    vec3 pos = Position + (ChunkPosition - CameraBlockPos) + CameraOffset;
+    vec3 pos = Position + ModelOffset;
     gl_Position = ProjMat * ModelViewMat * vec4(pos, 1.0);
 
     sphericalVertexDistance = fog_spherical_distance(pos);
